@@ -53,7 +53,7 @@ def transform_data_into_structure(data: str) -> (list[Word], dict[str, int]):
 
         if value[0] == '"':
             ascii_values = [ord(char) for char in value[1:-1].replace(r"\n", "\n")]
-            ascii_values.insert(0, len(ascii_values))
+            ascii_values.insert(0, int(len(ascii_values)))
             variables[name] = address_counter
             for char in ascii_values:
                 word = Word(int(address_counter), Opcode.NOP, int(char), 0)
@@ -112,7 +112,7 @@ def transform_text_into_structure(
                               Opcode.JG, Opcode.JGE]:
                 assert len(command_arguments) == 1, "branch instruction should have 1 argument - label"
                 assert labels[command_arguments[0][1:]] is not None, "No such label"
-                current_instruction = Word(address_counter, cur_opcode, str(labels[command_arguments[0][1:]]), 0)
+                current_instruction = Word(address_counter, cur_opcode, labels[command_arguments[0][1:]], 0)
 
             if cur_opcode == Opcode.MV:
                 assert len(command_arguments) == 2, "MV should have arguments two arguments"
@@ -145,8 +145,12 @@ def transform_text_into_structure(
                     current_instruction = (
                         Word(address_counter, Opcode.LD_ADDR, command_arguments[0], command_arguments[1]))
                 else:
-                    current_instruction = (
-                        Word(address_counter, Opcode.LD_LIT, command_arguments[0], command_arguments[1]))
+                    if command_arguments[1].isdigit():
+                        current_instruction = (
+                            Word(address_counter, Opcode.LD_LIT, command_arguments[0], int(command_arguments[1])))
+                    else:
+                        current_instruction = (
+                            Word(address_counter, Opcode.LD_LIT, command_arguments[0], command_arguments[1]))
 
             if cur_opcode == Opcode.ST:
                 assert len(command_arguments) == 2, "ST must have 2 arguments"
@@ -193,6 +197,11 @@ def transform_to_instruction(code: dict) -> list[Word]:
     return memory
 
 
+def add_ports(mem: list[Word]) -> None:
+    mem.insert(0, Word(0, Opcode.NOP, 0, 0))
+    mem.insert(1, Word(1, Opcode.NOP, 0 , 0))
+
+
 def perform_translator(source: str, target: str) -> None:
     code = preprocessing(source)
     data_mem: list[Word] = []
@@ -217,6 +226,7 @@ def perform_translator(source: str, target: str) -> None:
 
     start, command_mem = transform_text_into_structure(code[text_start:text_stop])
     memory = compilation(command_mem, data_mem, variables)
+    add_ports(memory)
     write_code(target, memory)
 
 

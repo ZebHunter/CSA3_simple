@@ -1,17 +1,13 @@
-section .data
-    hello_str: "Hello, World!"
-  section .text
-    .start:
-      ld r1 hello_str
-      ld r2 [hello_str]
-      ld r3 0
-    .loop:
-      cmp r2 r3
-      je .end
-      inc r1
-      dec r2
-      ld r3 r1
-      st r3 [OUT]
-      jump .loop
-    .end:
-      halt
+section .text
+  .start:
+    LD r1 [INP]
+    LD r3 0
+  .loop:
+    CMP r1 r3
+    JE .end
+    LD r2 [INP]
+    ST r2 [OUT]
+    DEC r1
+    JUMP .loop
+  .end:
+    HALT

@@ -4,7 +4,7 @@ import logging
 import sys
 from enum import Enum
 
-from machine.isa import Opcode, Register, Word, dr, pc, read_code, sp, INPUT_PORT
+from machine.isa import Opcode, Register, Word, dr, pc, read_code, sp, INPUT_PORT, OUTPUT_PORT
 
 
 class Alu:
@@ -14,8 +14,8 @@ class Alu:
     def __init__(self):
         self.acc = 0
 
-    min_value = -(2**32)
-    max_value = 2**32 - 1
+    min_value = -(2 ** 32)
+    max_value = 2 ** 32 - 1
 
     def set_flags(self, value: int):
         if value > self.max_value:
@@ -36,6 +36,7 @@ class Alu:
             Opcode.AND: lambda a, b: a & b,
             Opcode.OR: lambda a, b: a | b,
             Opcode.NEG: lambda a, b: ~a,
+            Opcode.SUB: lambda a, b: a - b,
             Opcode.DIV: lambda a, b: a / b,
             Opcode.MOD: lambda a, b: a % b
         }
@@ -61,7 +62,7 @@ class DataPath:
 
     def __init__(self, data: list[Word], input_tokens: list[str], mem_size: int = 4096):
         self.registers = {}
-        self.output_ports = {}
+        self.output_tokens = []
         self.mem_size = mem_size
         self.memory = data
         self.input_tokens = input_tokens
@@ -82,13 +83,17 @@ class DataPath:
     def memory_perform(self, oe: bool, wr: bool, addr: int) -> Word | None:
         instr: Word = self.get_instruction(addr)
         if oe:
+            if addr == INPUT_PORT:
+                symbol = self.input_tokens.pop(0)
+                logging.debug(f"input: {symbol!r} <- {''.join(self.input_tokens)!r}")
+                self.memory[INPUT_PORT].arg1 = int(symbol) if symbol.isdigit() else ord(symbol)
             return instr
         if wr:
             instr.arg1 = self.registers[dr]
-        if addr == INPUT_PORT:
-            symbol = self.input_tokens.pop(0)
-            logging.debug(f"input: {symbol!r} <- {''.join(self.input_tokens)!r}")
-
+        if addr == OUTPUT_PORT:
+            symbol = chr(self.registers[dr])
+            logging.debug(f"output: {''.join(self.output_tokens)!r} <- {symbol!r}")
+            self.output_tokens.append(symbol)
         return None
 
     def perform_arithmetic(self, opcode: Opcode, arg1: int, arg2: int = 0) -> int:
@@ -129,12 +134,12 @@ class ControlUnit:
         jmp_flag: bool = False
 
         if (
-            opcode is Opcode.JE
-            or opcode is Opcode.JNE
-            or opcode is Opcode.JL
-            or opcode is Opcode.JLE
-            or opcode is Opcode.JG
-            or opcode is Opcode.JGE
+                opcode is Opcode.JE
+                or opcode is Opcode.JNE
+                or opcode is Opcode.JL
+                or opcode is Opcode.JLE
+                or opcode is Opcode.JG
+                or opcode is Opcode.JGE
         ):
             match opcode:
                 case Opcode.JE:
@@ -212,16 +217,6 @@ class ControlUnit:
         self.data_path.memory_perform(False, True, addr)
         self.tick()
 
-    def st_stack(self, instr: Word):
-        reg_from: Register = instr.arg1
-        data: int = self.data_path.perform_arithmetic(Opcode.ADD, 0, self.data_path.registers[reg_from])
-        self.data_path.latch_reg(dr, data)
-        self.tick()
-        addr_to: int = self.data_path.mem_size - instr.arg2 - 1
-        self.tick()
-        self.data_path.memory_perform(False, True, addr_to)
-        self.tick()
-
     def mv(self, instr: Word):
         reg_from: Register = instr.arg1
         reg_from_data: int = self.data_path.perform_arithmetic(Opcode.ADD, 0, self.data_path.registers[reg_from])
@@ -243,31 +238,28 @@ class ControlUnit:
         self.tick()
 
     def cmp(self, instr: Word):
-        inv = self.data_path.perform_arithmetic(Opcode.NEG, self.data_path.load_reg(instr.arg2))
-        self.tick()
-        inv = self.data_path.perform_arithmetic(Opcode.INC, inv)
-        self.tick()
-        self.data_path.perform_arithmetic(Opcode.ADD, self.data_path.load_reg(instr.arg1), inv)
+        self.data_path.perform_arithmetic(Opcode.SUB, self.data_path.load_reg(instr.arg1),
+                                            self.data_path.load_reg(instr.arg2))
         self.tick()
 
     def sub(self, instr: Word):
-        inv = self.data_path.perform_arithmetic(Opcode.NEG, self.data_path.load_reg(instr.arg2))
+        res = self.data_path.perform_arithmetic(Opcode.SUB, self.data_path.load_reg(instr.arg1),
+                                                self.data_path.load_reg(instr.arg2))
         self.tick()
-        inv = self.data_path.perform_arithmetic(Opcode.INC, inv)
-        self.tick()
-        res = self.data_path.perform_arithmetic(Opcode.ADD, self.data_path.load_reg(instr.arg1), inv)
         self.data_path.latch_reg(instr.arg1, res)
         self.tick()
 
     def div(self, instr: Word):
         res = self.data_path.perform_arithmetic(Opcode.DIV, self.data_path.load_reg(instr.arg1),
                                                 self.data_path.load_reg(instr.arg2))
+        self.tick()
         self.data_path.latch_reg(instr.arg1, res)
         self.tick()
 
     def mod(self, instr: Word):
         res = self.data_path.perform_arithmetic(Opcode.DIV, self.data_path.load_reg(instr.arg1),
                                                 self.data_path.load_reg(instr.arg2))
+        self.tick()
         self.data_path.latch_reg(instr.arg1, res)
         self.tick()
 
@@ -350,8 +342,8 @@ def simulation(mem: list[Word], input_tokens: list[str], limit: int):
 
     if instr_counter >= limit:
         logging.warning("Limit exceeded!")
-    logging.info("output_buffer: %s", repr("".join(data_path.output_ports[0])))
-    return "".join(data_path.output_ports[0]), instr_counter, control_unit.current_tick()
+    logging.info("output_buffer: %s", repr("".join(data_path.output_tokens)))
+    return "".join(data_path.output_tokens), instr_counter, control_unit.current_tick()
 
 
 def main(code_file, input_file):

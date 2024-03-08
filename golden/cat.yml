@@ -7,7 +7,7 @@ in_source: |-
     CMP r1 r3
     JE .end
     LD r2 [INP]
-    ST [OUT] r2
+    ST r2 [OUT]
     DEC r1
     JUMP .loop
   .end:
