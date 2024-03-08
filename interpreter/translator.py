@@ -133,7 +133,7 @@ def transform_text_into_structure(
                 assert is_register(command_arguments[0]), "Not registers in arguments"
                 if is_register(command_arguments[1]):
                     current_instruction = Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-                elif command_arguments[1][0] == '[':
+                elif command_arguments[1][0] == "[":
                     command_arguments[1] = command_arguments[1][1:-1]
                     current_instruction = (
                         Word(address_counter, Opcode.LD_ADDR, command_arguments[0], command_arguments[1]))
@@ -146,7 +146,7 @@ def transform_text_into_structure(
                 assert is_register(command_arguments[0]), "Not registers in arguments"
                 if is_register(command_arguments[1]):
                     current_instruction = Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-                elif command_arguments[1][0] == '[':
+                elif command_arguments[1][0] == "[":
                     command_arguments[1] = command_arguments[1][1:-1]
                     current_instruction = (
                         Word(address_counter, Opcode.ST_ADDR, command_arguments[0], command_arguments[1]))
