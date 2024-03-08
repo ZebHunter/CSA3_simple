@@ -8,6 +8,12 @@ from machine.isa import Opcode, Word, write_code
 USER_REGISTERS = ["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r14", "r15"]
 
 
+class ArgumentError(Exception):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
 def is_register(arg: str) -> bool:
     return arg in USER_REGISTERS
 
@@ -114,7 +120,8 @@ def transform_text_into_structure(
                 if is_register(command_arguments[1]):
                     current_instruction = Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
                 else:
-                    raise Exception("MV second argument can be: register")
+                    mess = "MV second argument can be: register"
+                    raise ArgumentError(mess)
 
             if cur_opcode in [Opcode.INC, Opcode.DEC]:
                 assert len(command_arguments) == 1, "INC/DEC/NEG must have only one argument - register"
