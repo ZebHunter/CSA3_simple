@@ -28,7 +28,7 @@ jobs:
     - name: Lint with ruff
       run: |
         poetry run python -m ruff interpreter
-        poetry run python -m ruff machine --fix
+        poetry run python -m ruff machine
   test:
     runs-on: ubuntu-latest
     steps:

@@ -24,7 +24,8 @@ def test_translator_and_machine(golden, caplog):
             file.write(golden["in_stdin"])
 
         with contextlib.redirect_stdout(io.StringIO()) as stdout:
-            translator.main(source, target)
+            args = (source, target)
+            translator.main(args)
             print("============================================================")
             emulator.main(target, input_stream)
 

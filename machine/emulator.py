@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 import sys
 from enum import Enum
-from machine.isa import (Opcode, Register, Word, dr, pc, read_code, sp,
-                         INPUT_PORT, OUTPUT_PORT)
+
+from machine.isa import INPUT_PORT, OUTPUT_PORT, Opcode, Register, Word, dr, pc, read_code, sp
 
 
 class Alu:
