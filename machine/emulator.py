@@ -4,7 +4,8 @@ import logging
 import sys
 from enum import Enum
 
-from machine.isa import Opcode, Register, Word, dr, pc, read_code, sp, INPUT_PORT, OUTPUT_PORT
+from machine.isa import (Opcode, Register, Word, dr, pc, read_code, sp,
+                         INPUT_PORT, OUTPUT_PORT)
 
 
 class Alu:
@@ -238,8 +239,8 @@ class ControlUnit:
         self.tick()
 
     def cmp(self, instr: Word):
-        self.data_path.perform_arithmetic(Opcode.SUB, self.data_path.load_reg(instr.arg1),
-                                            self.data_path.load_reg(instr.arg2))
+        self.data_path.perform_arithmetic(Opcode.SUB,
+                                          self.data_path.load_reg(instr.arg1), self.data_path.load_reg(instr.arg2))
         self.tick()
 
     def sub(self, instr: Word):
