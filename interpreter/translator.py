@@ -78,16 +78,6 @@ def handle_branch_instructions(address_counter, cur_opcode, command_arguments, l
     return Word(address_counter, cur_opcode, labels[command_arguments[0][1:]], 0)
 
 
-def handle_mv_instruction(address_counter, cur_opcode, command_arguments) -> Word:
-    assert len(command_arguments) == 2, "MV should have arguments two arguments"
-    assert is_register(command_arguments[0]), "MV first argument should be register"
-    if is_register(command_arguments[1]):
-        return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-    else:
-        mess = "MV second argument can be: register"
-        raise ArgumentError(mess)
-
-
 def handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments) -> Word:
     assert len(command_arguments) == 1, "INC/DEC/NEG must have only one argument - register"
     assert is_register(command_arguments[0]), "INC/DEC/NEG first argument should be register"
@@ -166,15 +156,12 @@ def process_instructions(
                                 Opcode.JG, Opcode.JGE]:
                 current_instruction = handle_branch_instructions(address_counter, cur_opcode, command_arguments, labels)
 
-            elif cur_opcode == Opcode.MV:
-                current_instruction = handle_mv_instruction(address_counter, cur_opcode, command_arguments)
-
-            elif cur_opcode in [Opcode.INC, Opcode.DEC]:
-                current_instruction = handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments)
+            elif cur_opcode in [Opcode.INC, Opcode.DEC, Opcode.NEG]:
+                current_instruction = handle_inc_dec_instruction(address_counter, cur_opcode, command_arguments)
 
             elif cur_opcode in [Opcode.ADD, Opcode.MOD, Opcode.DIV,
                                 Opcode.SUB, Opcode.CMP, Opcode.AND,
-                                Opcode.OR, Opcode.XOR]:
+                                Opcode.OR, Opcode.XOR, Opcode.MV]:
                 current_instruction = handle_arithmetic_instructions(address_counter, cur_opcode, command_arguments)
 
             elif cur_opcode == Opcode.LD:
