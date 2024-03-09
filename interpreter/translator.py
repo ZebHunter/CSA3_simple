@@ -38,7 +38,7 @@ def preprocessing(asm_text: str) -> str:
     return joined
 
 
-def transform_data_into_structure(data: str) -> (list[Word], dict[str, int]):
+def transform_data(data: str) -> (list[Word], dict[str, int]):
     program_data: list[Word] = []
     variables: dict[str, int] = {}
     address_counter = 2
@@ -68,7 +68,64 @@ def transform_data_into_structure(data: str) -> (list[Word], dict[str, int]):
     return program_data, variables
 
 
-def transform_text_into_structure(
+def handle_halt_nop(address_counter, cur_opcode) -> Word:
+    return Word(address_counter, cur_opcode, 0, 0)
+
+
+def handle_branch_instructions(address_counter, cur_opcode, command_arguments, labels) -> Word:
+    assert len(command_arguments) == 1, "branch instruction should have 1 argument - label"
+    assert labels[command_arguments[0][1:]] is not None, "No such label"
+    return Word(address_counter, cur_opcode, labels[command_arguments[0][1:]], 0)
+
+
+def handle_mv_instruction(address_counter, cur_opcode, command_arguments) -> Word:
+    assert len(command_arguments) == 2, "MV should have arguments two arguments"
+    assert is_register(command_arguments[0]), "MV first argument should be register"
+    if is_register(command_arguments[1]):
+        return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
+    else:
+        mess = "MV second argument can be: register"
+        raise ArgumentError(mess)
+
+
+def handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments) -> Word:
+    assert len(command_arguments) == 1, "INC/DEC/NEG must have only one argument - register"
+    assert is_register(command_arguments[0]), "INC/DEC/NEG first argument should be register"
+    return Word(address_counter, cur_opcode, command_arguments[0], 0)
+
+
+def handle_arithmetic_instructions(address_counter, cur_opcode, command_arguments) -> Word:
+    assert len(command_arguments) == 2, "Arithmetic commands should have two registers as args"
+    assert is_register(command_arguments[0]), "Arithmetic commands args is registers"
+    return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
+
+
+def handle_ld_instruction(address_counter, cur_opcode, command_arguments) -> Word:
+    assert len(command_arguments) == 2, "LD must have 2 arguments"
+    assert is_register(command_arguments[0]), "Not registers in arguments"
+    if is_register(command_arguments[1]):
+        return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
+    elif command_arguments[1][0] == "[":
+        command_arguments[1] = command_arguments[1][1:-1]
+        return Word(address_counter, Opcode.LD_ADDR, command_arguments[0], command_arguments[1])
+    else:
+        if command_arguments[1].isdigit():
+            return Word(address_counter, Opcode.LD_LIT, command_arguments[0], int(command_arguments[1]))
+        else:
+            return Word(address_counter, Opcode.LD_LIT, command_arguments[0], command_arguments[1])
+
+
+def handle_st_instruction(address_counter, cur_opcode, command_arguments) -> Word:
+    assert len(command_arguments) == 2, "ST must have 2 arguments"
+    assert is_register(command_arguments[0]), "Not registers in arguments"
+    if is_register(command_arguments[1]):
+        return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
+    elif command_arguments[1][0] == "[":
+        command_arguments[1] = command_arguments[1][1:-1]
+        return Word(address_counter, Opcode.ST_ADDR, command_arguments[0], command_arguments[1])
+
+
+def process_instructions(
         text: str
 ) -> (int, list[Word]):
     assert text.find(".start:") != -1, ".start label not found"
@@ -77,7 +134,6 @@ def transform_text_into_structure(
     address_counter: int = 2
     command_mem: list[Word] = []
 
-    # Label handling
     for instr in text.split("\n"):
         decoding = instr.split(" ")
         if decoding[0][0] == ".":
@@ -94,7 +150,6 @@ def transform_text_into_structure(
 
     address_counter = 2
 
-    # Instruction handling
     for instr in text.split("\n"):
         decoding = instr.split(" ")
         if decoding[0][0] != ".":
@@ -104,63 +159,29 @@ def transform_text_into_structure(
             command_arguments = decoding[1:]
 
             if cur_opcode in [Opcode.HALT, Opcode.NOP]:
-                assert len(command_arguments) == 0, "HLT/NOP should not have arguments"
-                current_instruction = Word(address_counter, cur_opcode, 0, 0)
+                current_instruction = handle_halt_nop(address_counter, cur_opcode)
 
-            if cur_opcode in [Opcode.JE, Opcode.JUMP, Opcode.JG,
-                              Opcode.JLE, Opcode.JL, Opcode.JNE,
-                              Opcode.JG, Opcode.JGE]:
-                assert len(command_arguments) == 1, "branch instruction should have 1 argument - label"
-                assert labels[command_arguments[0][1:]] is not None, "No such label"
-                current_instruction = Word(address_counter, cur_opcode, labels[command_arguments[0][1:]], 0)
+            elif cur_opcode in [Opcode.JE, Opcode.JUMP, Opcode.JG,
+                                Opcode.JLE, Opcode.JL, Opcode.JNE,
+                                Opcode.JG, Opcode.JGE]:
+                current_instruction = handle_branch_instructions(address_counter, cur_opcode, command_arguments, labels)
 
-            if cur_opcode == Opcode.MV:
-                assert len(command_arguments) == 2, "MV should have arguments two arguments"
-                assert is_register(command_arguments[0]), "MV first argument should be register"
-                if is_register(command_arguments[1]):
-                    current_instruction = Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-                else:
-                    mess = "MV second argument can be: register"
-                    raise ArgumentError(mess)
+            elif cur_opcode == Opcode.MV:
+                current_instruction = handle_mv_instruction(address_counter, cur_opcode, command_arguments)
 
-            if cur_opcode in [Opcode.INC, Opcode.DEC]:
-                assert len(command_arguments) == 1, "INC/DEC/NEG must have only one argument - register"
-                assert is_register(command_arguments[0]), "INC/DEC/NEG first argument should be register"
-                current_instruction = Word(address_counter, cur_opcode, command_arguments[0], 0)
+            elif cur_opcode in [Opcode.INC, Opcode.DEC]:
+                current_instruction = handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments)
 
-            if cur_opcode in [Opcode.ADD, Opcode.MOD, Opcode.DIV,
-                              Opcode.SUB, Opcode.CMP, Opcode.AND,
-                              Opcode.OR, Opcode.XOR]:
-                assert len(command_arguments) == 2, "Arithmetic commands should have two registers as args"
-                assert is_register(command_arguments[0]), "Arithmetic commands args is registers"
-                current_instruction = Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
+            elif cur_opcode in [Opcode.ADD, Opcode.MOD, Opcode.DIV,
+                                Opcode.SUB, Opcode.CMP, Opcode.AND,
+                                Opcode.OR, Opcode.XOR]:
+                current_instruction = handle_arithmetic_instructions(address_counter, cur_opcode, command_arguments)
 
-            if cur_opcode == Opcode.LD:
-                assert len(command_arguments) == 2, "LD must have 2 arguments"
-                assert is_register(command_arguments[0]), "Not registers in arguments"
-                if is_register(command_arguments[1]):
-                    current_instruction = Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-                elif command_arguments[1][0] == "[":
-                    command_arguments[1] = command_arguments[1][1:-1]
-                    current_instruction = (
-                        Word(address_counter, Opcode.LD_ADDR, command_arguments[0], command_arguments[1]))
-                else:
-                    if command_arguments[1].isdigit():
-                        current_instruction = (
-                            Word(address_counter, Opcode.LD_LIT, command_arguments[0], int(command_arguments[1])))
-                    else:
-                        current_instruction = (
-                            Word(address_counter, Opcode.LD_LIT, command_arguments[0], command_arguments[1]))
+            elif cur_opcode == Opcode.LD:
+                current_instruction = handle_ld_instruction(address_counter, cur_opcode, command_arguments)
 
-            if cur_opcode == Opcode.ST:
-                assert len(command_arguments) == 2, "ST must have 2 arguments"
-                assert is_register(command_arguments[0]), "Not registers in arguments"
-                if is_register(command_arguments[1]):
-                    current_instruction = Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-                elif command_arguments[1][0] == "[":
-                    command_arguments[1] = command_arguments[1][1:-1]
-                    current_instruction = (
-                        Word(address_counter, Opcode.ST_ADDR, command_arguments[0], command_arguments[1]))
+            elif cur_opcode == Opcode.ST:
+                current_instruction = handle_st_instruction(address_counter, cur_opcode, command_arguments)
 
             assert current_instruction is not None, "Instruction parsing error"
             command_mem.append(current_instruction)
@@ -199,10 +220,10 @@ def transform_to_instruction(code: dict) -> list[Word]:
 
 def add_ports(mem: list[Word]) -> None:
     mem.insert(0, Word(0, Opcode.NOP, 0, 0))
-    mem.insert(1, Word(1, Opcode.NOP, 0 , 0))
+    mem.insert(1, Word(1, Opcode.NOP, 0, 0))
 
 
-def perform_translator(source: str, target: str) -> None:
+def translation(source: str, target: str) -> None:
     code = preprocessing(source)
     data_mem: list[Word] = []
     variables = {}
@@ -222,9 +243,9 @@ def perform_translator(source: str, target: str) -> None:
         else:
             text_stop = data_index - 1
             data_stop = len(code)
-        data_mem, variables = transform_data_into_structure(code[data_start:data_stop])
+        data_mem, variables = transform_data(code[data_start:data_stop])
 
-    start, command_mem = transform_text_into_structure(code[text_start:text_stop])
+    start, command_mem = process_instructions(code[text_start:text_stop])
     memory = compilation(command_mem, data_mem, variables)
     add_ports(memory)
     write_code(target, memory)
@@ -236,7 +257,7 @@ def main(args):
     target = args[1]
     with open(source, encoding="utf-8") as file:
         code = file.read()
-    perform_translator(code, target)
+    translation(code, target)
 
 
 if __name__ == "__main__":
