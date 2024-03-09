@@ -98,30 +98,25 @@ def handle_ld_instruction(address_counter, cur_opcode, command_arguments) -> Wor
     if is_register(command_arguments[1]):
         return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
     elif command_arguments[1][0] == "[":
-        command_arguments[1] = command_arguments[1][1:-1]
-        return Word(address_counter, Opcode.LD_ADDR, command_arguments[0], command_arguments[1])
+        return Word(address_counter, Opcode.LD_ADDR, command_arguments[0], command_arguments[1][1:-1])
     else:
         if command_arguments[1].isdigit():
             return Word(address_counter, Opcode.LD_LIT, command_arguments[0], int(command_arguments[1]))
-        else:
-            return Word(address_counter, Opcode.LD_LIT, command_arguments[0], command_arguments[1])
+        return Word(address_counter, Opcode.LD_LIT, command_arguments[0], command_arguments[1])
 
 
 def handle_st_instruction(address_counter, cur_opcode, command_arguments) -> Word:
     assert len(command_arguments) == 2, "ST must have 2 arguments"
     assert is_register(command_arguments[0]), "Not registers in arguments"
-    if is_register(command_arguments[1]):
-        return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-    elif command_arguments[1][0] == "[":
-        command_arguments[1] = command_arguments[1][1:-1]
-        return Word(address_counter, Opcode.ST_ADDR, command_arguments[0], command_arguments[1])
+    if command_arguments[1][0] == "[":
+        return Word(address_counter, Opcode.ST_ADDR, command_arguments[0], command_arguments[1][1:-1])
+    return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
 
 
 def handle_mem_operation(address_counter, cur_opcode, command_arguments) -> Word:
     if cur_opcode == Opcode.LD:
         return handle_ld_instruction(address_counter, cur_opcode, command_arguments)
-    else:
-        return handle_st_instruction(address_counter, cur_opcode, command_arguments)
+    return handle_st_instruction(address_counter, cur_opcode, command_arguments)
 
 
 def parse_label(text: str) -> (int, dict[str, int]):
