@@ -167,9 +167,6 @@ def process_instructions(
                                 Opcode.JG, Opcode.JGE]:
                 current_instruction = handle_branch_instructions(address_counter, cur_opcode, command_arguments, labels)
 
-            elif cur_opcode in [Opcode.INC, Opcode.DEC, Opcode.NEG]:
-                current_instruction = handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments)
-
             elif cur_opcode in [Opcode.ADD, Opcode.MOD, Opcode.DIV,
                                 Opcode.SUB, Opcode.CMP, Opcode.AND,
                                 Opcode.OR, Opcode.XOR, Opcode.MV,
