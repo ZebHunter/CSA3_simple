@@ -5,7 +5,7 @@ import sys
 
 from machine.isa import Opcode, Word, write_code
 
-USER_REGISTERS = ["r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r14", "r15"]
+USER_REGISTERS = ["r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "r14", "r15"]
 
 
 class ArgumentError(Exception):
@@ -69,6 +69,7 @@ def transform_data(data: str) -> (list[Word], dict[str, int]):
                 program_data.append(word)
                 address_counter += 1
         elif len(value.split(" ")) == 3:
+            variables[name] = address_counter
             address_counter, buf = alloc_buffer(value, address_counter)
             for i in buf:
                 program_data.append(i)

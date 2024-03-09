@@ -37,7 +37,7 @@ class Alu:
             Opcode.OR: lambda a, b: a | b,
             Opcode.NEG: lambda a, b: ~a,
             Opcode.SUB: lambda a, b: a - b,
-            Opcode.DIV: lambda a, b: a / b,
+            Opcode.DIV: lambda a, b: a // b,
             Opcode.MOD: lambda a, b: a % b
         }
         operation = operations.get(opcode, None)
@@ -91,7 +91,7 @@ class DataPath:
         if wr:
             instr.arg1 = self.registers[dr]
         if addr == OUTPUT_PORT:
-            symbol = chr(self.registers[dr])
+            symbol = chr(self.registers[dr]) if self.registers[dr] < 127 else str(self.registers[dr])
             logging.debug(f"output: {''.join(self.output_tokens)!r} <- {symbol!r}")
             self.output_tokens.append(symbol)
         return None
@@ -257,7 +257,7 @@ class ControlUnit:
         self.tick()
 
     def mod(self, instr: Word):
-        res = self.data_path.perform_arithmetic(Opcode.DIV, self.data_path.load_reg(instr.arg1),
+        res = self.data_path.perform_arithmetic(Opcode.MOD, self.data_path.load_reg(instr.arg1),
                                                 self.data_path.load_reg(instr.arg2))
         self.tick()
         self.data_path.latch_reg(instr.arg1, res)
