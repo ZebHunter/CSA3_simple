@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import sys
 from enum import Enum
-
 from machine.isa import (Opcode, Register, Word, dr, pc, read_code, sp,
                          INPUT_PORT, OUTPUT_PORT)
 
