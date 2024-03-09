@@ -38,6 +38,15 @@ def preprocessing(asm_text: str) -> str:
     return joined
 
 
+def alloc_buffer(value: str, adress_count: int) -> (int, list[Word]):
+    buffer: list[Word] = []
+    value = value.split(" ")
+    for i in range(int(value[2])):
+        buffer.append(Word(adress_count, Opcode.NOP, int(value[0]), 0))
+        adress_count += 1
+    return adress_count, buffer
+
+
 def transform_data(data: str) -> (list[Word], dict[str, int]):
     program_data: list[Word] = []
     variables: dict[str, int] = {}
@@ -59,6 +68,10 @@ def transform_data(data: str) -> (list[Word], dict[str, int]):
                 word = Word(int(address_counter), Opcode.NOP, int(char), 0)
                 program_data.append(word)
                 address_counter += 1
+        elif len(value.split(" ")) == 3:
+            address_counter, buf = alloc_buffer(value, address_counter)
+            for i in buf:
+                program_data.append(i)
         else:
             variables[name] = address_counter
             word = Word(int(address_counter), Opcode.NOP, int(value), 0)
