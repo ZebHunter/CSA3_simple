@@ -139,8 +139,6 @@ def process_instructions(
         text: str
 ) -> (int, list[Word]):
     assert text.find(".start:") != -1, ".start label not found"
-    labels: dict[str, int] = {}
-    start_address: int = -1
     start_address, labels = parse_label(text)
     address_counter: int = 2
     command_mem: list[Word] = []
@@ -148,7 +146,6 @@ def process_instructions(
     for instr in text.split("\n"):
         decoding = instr.split(" ")
         if decoding[0][0] != ".":
-            assert Opcode(decoding[0].upper()) is not None, "No such opcode"
             cur_opcode = Opcode(decoding[0].upper())
             current_instruction = None
             command_arguments = decoding[1:]
