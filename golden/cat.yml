@@ -69,7 +69,7 @@ out_stdout: |
   Misha
   instr_counter:  139 ticks: 529
 out_code: |-
-  [{"index": 0, "opcode": "NOP", "arg1": 0, "arg2": 0},
+ [{"index": 0, "opcode": "NOP", "arg1": 0, "arg2": 0},
  {"index": 1, "opcode": "NOP", "arg1": 0, "arg2": 0},
  {"index": 2, "opcode": "LD_ADDR", "arg1": "r1", "arg2": 0},
  {"index": 3, "opcode": "LD_LIT", "arg1": "r3", "arg2": 0},

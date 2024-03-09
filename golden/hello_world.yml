@@ -128,7 +128,7 @@ out_stdout: |
   Hello World!
   instr_counter:  91 ticks: 296
 out_code: |-
-  [{"index": 0, "opcode": "NOP", "arg1": 0, "arg2": 0},
+ [{"index": 0, "opcode": "NOP", "arg1": 0, "arg2": 0},
  {"index": 1, "opcode": "NOP", "arg1": 0, "arg2": 0},
  {"index": 2, "opcode": "LD_LIT", "arg1": "r1", "arg2": 13},
  {"index": 3, "opcode": "LD_ADDR", "arg1": "r2", "arg2": 13},
