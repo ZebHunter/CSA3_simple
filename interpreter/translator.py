@@ -78,16 +78,6 @@ def handle_branch_instructions(address_counter, cur_opcode, command_arguments, l
     return Word(address_counter, cur_opcode, labels[command_arguments[0][1:]], 0)
 
 
-def handle_mv_instruction(address_counter, cur_opcode, command_arguments) -> Word:
-    assert len(command_arguments) == 2, "MV should have arguments two arguments"
-    assert is_register(command_arguments[0]), "MV first argument should be register"
-    if is_register(command_arguments[1]):
-        return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
-    else:
-        mess = "MV second argument can be: register"
-        raise ArgumentError(mess)
-
-
 def handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments) -> Word:
     assert len(command_arguments) == 1, "INC/DEC/NEG must have only one argument - register"
     assert is_register(command_arguments[0]), "INC/DEC/NEG first argument should be register"
@@ -125,15 +115,10 @@ def handle_st_instruction(address_counter, cur_opcode, command_arguments) -> Wor
         return Word(address_counter, Opcode.ST_ADDR, command_arguments[0], command_arguments[1])
 
 
-def process_instructions(
-        text: str
-) -> (int, list[Word]):
-    assert text.find(".start:") != -1, ".start label not found"
-    labels: dict[str, int] = {}
-    start_address: int = -1
+def parse_label(text: str) -> (int, dict[str, int]):
     address_counter: int = 2
-    command_mem: list[Word] = []
-
+    start_address: int = -1
+    labels: dict[str, int] = {}
     for instr in text.split("\n"):
         decoding = instr.split(" ")
         if decoding[0][0] == ".":
@@ -147,8 +132,18 @@ def process_instructions(
             labels[current_label] = address_counter
         else:
             address_counter += 1
+    return start_address, labels
 
-    address_counter = 2
+
+def process_instructions(
+        text: str
+) -> (int, list[Word]):
+    assert text.find(".start:") != -1, ".start label not found"
+    labels: dict[str, int] = {}
+    start_address: int = -1
+    start_address, labels = parse_label(text)
+    address_counter: int = 2
+    command_mem: list[Word] = []
 
     for instr in text.split("\n"):
         decoding = instr.split(" ")
@@ -166,15 +161,12 @@ def process_instructions(
                                 Opcode.JG, Opcode.JGE]:
                 current_instruction = handle_branch_instructions(address_counter, cur_opcode, command_arguments, labels)
 
-            elif cur_opcode == Opcode.MV:
-                current_instruction = handle_mv_instruction(address_counter, cur_opcode, command_arguments)
-
-            elif cur_opcode in [Opcode.INC, Opcode.DEC]:
+            elif cur_opcode in [Opcode.INC, Opcode.DEC, Opcode.NEG]:
                 current_instruction = handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments)
 
             elif cur_opcode in [Opcode.ADD, Opcode.MOD, Opcode.DIV,
                                 Opcode.SUB, Opcode.CMP, Opcode.AND,
-                                Opcode.OR, Opcode.XOR]:
+                                Opcode.OR, Opcode.XOR, Opcode.MV]:
                 current_instruction = handle_arithmetic_instructions(address_counter, cur_opcode, command_arguments)
 
             elif cur_opcode == Opcode.LD:
