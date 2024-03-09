@@ -85,6 +85,8 @@ def handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments) 
 
 
 def handle_arithmetic_instructions(address_counter, cur_opcode, command_arguments) -> Word:
+    if cur_opcode == Opcode.INC or cur_opcode == Opcode.DEC or cur_opcode == Opcode.NEG:
+        return handle_inc_dec_instructions(address_counter, cur_opcode, command_arguments)
     assert len(command_arguments) == 2, "Arithmetic commands should have two registers as args"
     assert is_register(command_arguments[0]), "Arithmetic commands args is registers"
     return Word(address_counter, cur_opcode, command_arguments[0], command_arguments[1])
@@ -113,6 +115,13 @@ def handle_st_instruction(address_counter, cur_opcode, command_arguments) -> Wor
     elif command_arguments[1][0] == "[":
         command_arguments[1] = command_arguments[1][1:-1]
         return Word(address_counter, Opcode.ST_ADDR, command_arguments[0], command_arguments[1])
+
+
+def handle_mem_operation(address_counter, cur_opcode, command_arguments) -> Word:
+    if cur_opcode == Opcode.LD:
+        return handle_ld_instruction(address_counter, cur_opcode, command_arguments)
+    else:
+        return handle_st_instruction(address_counter, cur_opcode, command_arguments)
 
 
 def parse_label(text: str) -> (int, dict[str, int]):
@@ -163,14 +172,12 @@ def process_instructions(
 
             elif cur_opcode in [Opcode.ADD, Opcode.MOD, Opcode.DIV,
                                 Opcode.SUB, Opcode.CMP, Opcode.AND,
-                                Opcode.OR, Opcode.XOR, Opcode.MV]:
+                                Opcode.OR, Opcode.XOR, Opcode.MV,
+                                Opcode.INC, Opcode.DEC, Opcode.NEG]:
                 current_instruction = handle_arithmetic_instructions(address_counter, cur_opcode, command_arguments)
 
-            elif cur_opcode == Opcode.LD:
-                current_instruction = handle_ld_instruction(address_counter, cur_opcode, command_arguments)
-
-            elif cur_opcode == Opcode.ST:
-                current_instruction = handle_st_instruction(address_counter, cur_opcode, command_arguments)
+            elif cur_opcode == Opcode.LD or Opcode.ST:
+                current_instruction = handle_mem_operation(address_counter, cur_opcode, command_arguments)
 
             assert current_instruction is not None, "Instruction parsing error"
             command_mem.append(current_instruction)
